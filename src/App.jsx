@@ -1,14 +1,27 @@
+
+// src/App.jsx
+
 import './App.css'
+import { FilePicker, Header, TextContent } from "./components";
+import { ContentProvider } from "./context";
+import {SettingsPanel} from "./components/SettingsPanel.jsx";
+import {ScorePanel} from "./components/ScorePanel.jsx";
 
 function App() {
 
   return (
-    <>
-      <div className={'flex flex-col items-center py-14'}>
-        <h1 className={'bg-amber-100 font-bold text-gray-900 text-4xl p-4'}>Memo App</h1>
+    <ContentProvider>
+      <div className="">
+        <Header />
+        <FilePicker />
+        <SettingsPanel />
+        <ScorePanel />
+        <TextContent />
       </div>
-    </>
+    </ContentProvider>
   )
 }
 
 export default App
+
+

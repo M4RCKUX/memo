@@ -1,0 +1,442 @@
+// File: src/App.css
+
+
+// File: src/App.jsx
+
+// src/App.jsx
+
+import './App.css'
+import { FilePicker, Header, TextContent } from "./components";
+import { ContentProvider } from "./context";
+import {SettingsPanel} from "./components/SettingsPanel.jsx";
+import {ScorePanel} from "./components/ScorePanel.jsx";
+
+function App() {
+
+  return (
+    <ContentProvider>
+      <div className="">
+        <Header />
+        <FilePicker />
+        <SettingsPanel />
+        <ScorePanel />
+        <TextContent />
+      </div>
+    </ContentProvider>
+  )
+}
+
+export default App
+
+
+
+
+// File: src/components/FilePicker.jsx
+
+// src/components/FilePicker.jsx
+
+import {useContext} from "react";
+import {ContentContext} from "../context";
+
+
+export const FilePicker = () => {
+
+  const { dispatch } = useContext(ContentContext);
+
+  const onRead = (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      dispatch({type: 'SET_FILE_CONTENT', payload: ''});
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        dispatch({type: 'SET_FILE_CONTENT', payload: text});
+      }
+      reader.readAsText(file);
+    }
+  }
+
+  return (
+    <div
+      className="bg-white dark:bg-gray-800 shadow-md rounded-md p-4 w-full my-4"
+    >
+      <input
+        type="file"
+        accept=".txt"
+        className="mr-2"
+        onChange={onRead}
+      />
+
+    </div>
+  )
+}
+
+
+
+// File: src/components/Header.jsx
+
+// src/components/Header.jsx
+
+export const Header = () => {
+  return (
+    <>
+      <header className="bg-blue-600 dark:bg-gray-800 text-white dark:text-gray-200 p-4">
+        <h1 className="text-2xl">MemoApp</h1>
+      </header>
+    </>
+  );
+};
+
+
+
+// File: src/components/Line.jsx
+
+
+import {WordInput} from "./";
+import PropTypes from "prop-types";
+
+export const Line = ({ lineIndex, line, generation }) => {
+
+
+  return (
+    <div className="my-2">
+      { line.map((item, index) => (
+        item.isHidden ? (
+          <WordInput key={`gen-${generation}-line-${lineIndex}-item-${index}`} item={item} />
+        ) : (
+          <span
+            key={`item-${index}`}
+            className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-1 rounded-md mr-2"
+          >
+            {item.word}
+          </span>
+        )
+      )) }
+    </div>
+
+  )
+}
+
+Line.propTypes = {
+  line: PropTypes.array.isRequired,
+}
+
+
+
+// File: src/components/ScorePanel.jsx
+
+// src/components/ScorePanel.jsx
+
+import { useContext } from 'react';
+import { ContentContext } from '../context';
+
+export const ScorePanel = () => {
+  const { state } = useContext(ContentContext);
+
+  return (
+    <div className="score-panel bg-white dark:bg-gray-800 shadow-md rounded-md p-4 w-full my-4">
+      <div className="text-gray-800 dark:text-gray-200">
+        <p className="text-lg font-semibold">Correctas: {state.correctGaps} de {state.totalGaps}</p>
+      </div>
+    </div>
+  );
+};
+
+
+// File: src/components/SettingsPanel.jsx
+import React, {useContext} from "react";
+import {ContentContext} from "../context/index.js";
+
+export const SettingsPanel = () => {
+
+  const { dispatch } = useContext(ContentContext);
+
+  const onSliderChange = (e) => {
+    const difficulty = e.target.value;
+    dispatch({type: 'SET_RATIO', payload: difficulty});
+  }
+
+  const onReset = () => {
+    dispatch({type: 'SET_CONTENT'});
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 shadow-md rounded-md p-4 w-full my-4">
+      <div className="flex items-center">
+        <label htmlFor="difficulty-slider" className="mr-4">Difficulty Level</label>
+        <input
+          id="difficulty-slider"
+          type="range"
+          min="0"
+          max="1"
+          step="0.1"
+          defaultValue="0.5"
+          onChange={onSliderChange}
+        />
+      </div>
+      <button
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
+        onClick={onReset}
+      >
+        Reset
+      </button>
+    </div>
+  );
+}
+
+
+
+// File: src/components/TextContent.jsx
+
+// src/components/TextContent.jsx
+
+import {useContext, useEffect} from "react";
+import {Line} from "./";
+import {ContentContext} from "../context";
+
+export const TextContent = () => {
+
+  const {state, dispatch} = useContext(ContentContext);
+
+  useEffect(() => {
+    dispatch({type: 'SET_CONTENT'});
+  }, [state.fileContent]);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 shadow-md rounded-md p-4 w-full my-4">
+      <div className="text-gray-800 dark:text-gray-200">
+        {
+          state.content.map((line, index) => (
+            <Line generation={state.generation} key={`generation-${state.generation}-line-${index}`} lineIndex={index} line={line} />
+          ))
+        }
+      </div>
+    </div>
+  )
+}
+
+
+
+// File: src/components/WordInput.jsx
+
+// src/components/WordInput.jsx
+
+import {useContext, useEffect, useRef, useState} from "react";
+import {ContentContext} from "../context";
+
+export const WordInput = ({item}) => {
+
+  const { dispatch } = useContext(ContentContext);
+
+  const { id, word, isCorrect} = item;
+  const [inputValue, setInputValue] = useState('');
+
+  const handleChange = (e) => {
+    setInputValue(e.target.value);
+  }
+
+  const handleDoubleClick = () => {
+    setInputValue(word);
+  }
+
+  useEffect(() => {
+    if (word === inputValue) {
+      dispatch({type: 'SET_CORRECT_GAP', payload: id});
+    }
+  }, [inputValue]);
+
+  return (
+    <input
+      type="text"
+      className={
+        `p-1 rounded-md mr-2
+        bg-white text-gray-800
+        dark:bg-gray-700 dark:text-gray-200 border-2
+        ${isCorrect? 'border-green-500': 'border-gray-800 dark:border-gray-200'} 
+        `
+      }
+      size={item.word.length}
+      value={inputValue}
+      disabled={isCorrect}
+      onChange={handleChange}
+      onDoubleClick={handleDoubleClick}
+    />
+  )
+}
+
+
+
+// File: src/components/index.js
+
+
+export * from './Header';
+export * from './FilePicker';
+export * from './TextContent';
+export * from './WordInput';
+export * from './Line';
+
+// File: src/context/ContentContext.jsx
+import {createContext} from "react";
+
+export const ContentContext =  createContext();
+
+// File: src/context/ContentProvider.jsx
+
+// src/context/ContentProvider.jsx
+
+import {ContentContext} from "./";
+import {useReducer} from "react";
+import {initialState, reducer} from "../reducers";
+
+
+export const ContentProvider = ({ children }) => {
+
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  return (
+    <ContentContext.Provider value={{
+      state,
+      dispatch,
+    }}>
+      { children }
+    </ContentContext.Provider>
+  )
+}
+
+
+
+// File: src/context/index.js
+
+export * from './ContentContext';
+export * from './ContentProvider';
+
+// File: src/helpers/getObjectsFromText.js
+
+// src/helpers/getObjectsFromText.js
+
+let globalId = 0;
+
+const isSymbol = (text) => /(\s+|[,;.!?\-+(){}[\]"'<>:])/.test(text);
+
+const splitText = (text, ratio) =>
+  text.split(/(\s+|[,;.!?\-+(){}[\]"'<>:])/).filter(item => item.trim() !== '')
+      .reduce((acc, item) => {
+        const isHidden = !isSymbol(item) && Math.random() < ratio;
+        const lastObject = acc[acc.length - 1];
+        if (lastObject && !lastObject.isHidden && !isHidden) {
+          lastObject.word += `${isSymbol(item) ? '' : ' '}${item}`;
+        } else {
+          acc.push({
+            id: globalId++,
+            word: item,
+            isHidden,
+            isCorrect: !isHidden,
+          });
+        }
+        return acc;
+      }, [])
+;
+
+export const getObjectsFromText = (text, ratio) => {
+  globalId = 0;
+  return text .split(/\r?\n/).filter(line => line.trim() !== '') // split text into lines excluding empty lines
+              .map(line => splitText(line, ratio)); // split each line into objects: text and gaps
+}
+
+
+
+// File: src/helpers/index.js
+export * from './getObjectsFromText';
+
+// File: src/hooks/index.js
+
+
+
+// File: src/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+// File: src/main.jsx
+
+// src/main.jsx
+
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+
+
+
+// File: src/reducers/index.js
+
+
+export * from './reducer';
+
+// File: src/reducers/reducer.js
+
+// src/reducers/reducer.js
+
+import {getObjectsFromText} from "../helpers/index.js";
+
+
+export const initialState = {
+  fileContent: '',
+  content: [],
+  ratio: 0.5,
+  generation: 0,
+  totalGaps: 0,
+  correctGaps: 0,
+  completed: false,
+}
+
+export const reducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_FILE_CONTENT':
+      return {
+        ...state,
+        fileContent: action.payload,
+      }
+    case 'SET_CONTENT':
+      const content = getObjectsFromText(state.fileContent, state.ratio);
+      const totalGaps = content.flat().filter(item => item.isHidden).length;
+      return {
+        ...state,
+        content,
+        totalGaps,
+        correctGaps: 0,
+        generation: state.generation + 1,
+        completed: false,
+      }
+    case 'SET_RATIO':
+      return {
+        ...state,
+        ratio: action.payload,
+      }
+    case 'SET_CORRECT_GAP':
+      const id = action.payload;
+      return {
+        ...state,
+        content: state.content.map(
+          line => line.map(
+            item => item.id === id ? {...item, isCorrect: true} : item
+          )
+        ),
+        correctGaps: state.correctGaps + 1,
+        completed: state.correctGaps + 1 === state.totalGaps,
+      }
+    default:
+      return state;
+  }
+}
+
+
+
